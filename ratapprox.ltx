@@ -1,0 +1,635 @@
+%% Author:      Peter John Acklam
+%% Time-stamp:  2023-01-05 17:06:20 Vest-Europa (normaltid)
+%% E-mail:      pjacklam@gmail.com
+
+\documentclass[a4paper,12pt,twoside,onecolumn]{article}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+%%\usepackage{mathptmx}           % For Times typeface in text and math
+%%\usepackage{newpxtext}          % For Palatino typeface in text
+%%\usepackage{newpxmath}          % For Palatino typeface in math
+\usepackage{amsmath}            % For extra math macros etc.
+% \usepackage{amssymb}            % For extra math symbols and fonts
+% \usepackage{latexsym}
+% \usepackage{fancyhdr}           % Fancy headers and footers
+\usepackage[british]{babel}       % For language-specific options
+\usepackage{caption}
+
+% Set margins for odd and even pages.
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{2cm}
+\setlength{\evensidemargin}{\oddsidemargin}
+
+% Center the text on page horizontally.
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-2in}
+\addtolength{\textwidth}{-2\oddsidemargin}
+
+% Set the margins on the top of the paper.
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{2cm}
+%\setlength{\headheight}{0cm}
+%\setlength{\headsep}{0cm}
+
+% Calculate new height of text area.
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-2in}
+\addtolength{\textheight}{-2\topmargin}
+\addtolength{\textheight}{-\headheight}
+\addtolength{\textheight}{-\headsep}
+\addtolength{\textheight}{-\footskip}
+
+% Use blank line, not indent, to separate paragraphs.
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.7\baselineskip}
+
+%\newcommand{\filedate}{\today}
+%\newcommand{\filedate}{18th December 2022}
+%\newcommand{\fileauthor}{Peter John Acklam\\\normalsize{pjacklam@gmail.com}}
+%\newcommand{\fileauthor}{Peter John Acklam}
+
+% Headers and footers.
+%\lhead{\filedate}
+%\lhead{}
+%\chead{}
+%\rhead{\fileauthor}
+%\rhead{}
+%\lfoot{}
+%\cfoot{\thepage}
+%\rfoot{}
+
+% No rulers below header and above footer.
+%\renewcommand{\headrulewidth}{0pt}
+%\renewcommand{\footrulewidth}{0pt}
+
+%\pagestyle{fancy}
+
+\title{An algorithm for creating a rational minimax \\
+  approximation of a smooth function}
+\author{\fileauthor}
+\date{\filedate}
+
+\captionsetup{width=1.00\linewidth}
+
+\begin{document}
+
+%\maketitle
+
+\begin{center}
+  \Large \textbf{An algorithm for creating a rational minimax \\
+    approximation of a smooth function} \\[0.7em]
+  \large Peter John Acklam \\[0.3em]
+  \normalsize pjacklam@gmail.com \\[0.4em]
+  \normalsize \today
+\end{center}
+
+\section{Introduction}
+
+Assume we have a smooth function $f(x)$ that we want to approxmiate on the
+interval $[x_{\min},x_{\max}]$ with a rational function $g(x) = P(x)/Q(x)$
+where $P(x)$ is a polynomial of degree $p$, and $Q(x)$ is a polynomial of
+degree $q$:
+%
+\begin{gather}
+  f(x)
+  \approx g(x)
+  = \frac{P(x)}{Q(x)}
+  = \frac{a_px^p+a_{p-1}x^{p-1}+\cdots+a_2x^2+a_1x+a_0}{b_qx^q+b_{q-1}x^{q-1}+\cdots+b_2x^2+b_1x+1}
+  \label{eq:g}
+\end{gather}
+%
+We are not interested in just any rational function, but the one which has the
+smallest maximum error of all rational functions with polynomials of degrees
+$p$ and $q$.
+
+In this article I will describe an algorithm for finding this rational minimax
+approximation.
+
+\section{The main steps of the algorithm}
+
+The main steps of this algorithm are
+%
+\begin{enumerate}
+  \item Select an initial set of $n$ unique nodes, $x_1,\ldots,x_n$, on the
+    interval $(x_{\min}, x_{\max})$. The rational function $g(x)$ will be
+    identical to the function $f(x)$ at the nodes, i.e., $g(x_k)=f(x_k)$ for
+    $k=1,\ldots,n$.
+  \item From the $n$ nodes, compute the coefficients of $p(x)$ and $q(x)$, the
+    polynomials in the rational function $g(x)$. \label{algo:nodes_to_coef}
+  \item Find the $n+1$ local extrema of the error, typically the absolute error
+    $g(x)-f(x)$ or the relative error $|g(x)-f(x))/f(x)|$, on the interval
+    $[x_{\min}, x_{\max}]$. If all the local extrema, are close enough, we're
+    done.
+  \item From the $n$ nodes and the $n+1$ extrema, compute a new set of $n$
+    unique nodes on the interval $(x_{\min}, x_{\max})$.
+  \item Go to step \ref{algo:nodes_to_coef}.
+\end{enumerate}
+
+\section{The algorithm in more detail}
+
+\subsection{The initial set of nodes}
+
+In my experience, the selection of the initial set of nodes is not very
+important, but it does affect how fast the algorithm converges.
+
+Let's first assume that we are interested in approximating a function over the
+interval $[-1,1]$. We could start off by using uniformly distributed nodes in
+the interval $(-1,1)$, like
+%
+% 2*k / (n + 1) - 1
+%
+\begin{gather}
+  x_k = \frac{2k-n-1}{n + 1} = \frac{2k}{n+1}-1, \quad k=1,\ldots,n
+  \label{eq:nodes_unif1}
+\end{gather}
+%
+where the nodes are uniformly distributed and where the distance between the
+edge nodes and the edge is identical to the distance between each node (see the
+top row of nodes in figure~\ref{fig:initial_nodes}). An alternative is to use
+%
+% (2*k - 1) / n - 1
+%
+\begin{gather}
+  x_k = \frac{2k-n-1}{n} = \frac{2k-1}{n}-1, \quad k=1,\ldots,n.
+  \label{eq:nodes_unif2}
+\end{gather}
+%
+where the nodes are also uniformly distributed, but where the distance between
+the edge nodes and the edge is half the distance between each node (see the
+middle row of nodes in figure~\ref{fig:initial_nodes}). However, in general it
+is better to use so-called Chebyshev nodes, which are the roots of the
+Chebyshev polynomials of the first kind, $T_n(x)$. For a given positive integer
+$n$, the Chebyshev nodes are all in the interval $(-1,1)$ and can be expressed
+as
+%
+% cos( (2*(n-k) + 1) / (2*n) * pi)
+%
+\begin{gather}
+  x_k = \cos\left(\frac{2(n-k)+1}{2n}\pi\right), \quad k=1,\ldots,n
+  \label{eq:nodes_cheb}
+\end{gather}
+%
+The Chebyshev nodes are more closely spaced near the edges than in the middle
+of the interval (see the bottom row in figure~\ref{fig:initial_nodes}).
+%
+% [ 2*k/(n+1) - 1, (2*k-1)/n - 1, cos((2*(n-k)+1)/(2*n)*pi) ]
+%
+%\begin{tabular}
+%\begin{gather}
+%  \begin{array}{rrrrrrr}
+%    k & & \text{equation}~\eqref{eq:nodes_unif1} && \text{equation}~\eqref{eq:nodes_unif2} && \text{equation}~\eqref{eq:nodes_cheb} \\
+%    \hline
+%    1 & \qquad & -0.666666666667 & \qquad  & -0.8 & \qquad   & -0.951056516295 \\
+%    2 &        & -0.333333333333 &         & -0.4 &          & -0.587785252292 \\
+%    3 &        &  0\phantom{.333333333333} & & 0\phantom{.0} & & 0\phantom{.587785252292} \\
+%    4 &        &  0.333333333333 &         &  0.4 &          &  0.587785252292 \\
+%    5 &        &  0.666666666667 &         &  0.8 &          &  0.951056516295
+%  \end{array}
+%\end{gather}
+%\end{tabular}
+%
+\begin{figure}[htb]
+  \centering
+  %\begin{center}
+    \includegraphics[width=0.95\textwidth]{initial_nodes.eps}
+    \caption{Three alternatives for the set of initial nodes when $n=7$.}
+    \label{fig:initial_nodes}
+  %\end{center}
+\end{figure}
+
+If $u_k$ are nodes on the interval $[-1,1]$, we can use the following to
+tranform the nodes to the interval $[x_{\min}, x_{\max}]$.
+%
+\begin{gather}
+  x_k = \frac{1}{2}(x_{\min}+x_{\max})
+  + \frac{1}{2}(x_{\max}-x_{\min})u_k, \quad k=1,\ldots,n
+  \label{eq:nodes_transf}
+\end{gather}
+
+\subsection{From nodes to coefficients}
+
+As seen in equation~\eqref{eq:g}, there are $p+1$ unknowns, $a_0,\ldots,a_p$,
+in the numerator, and there are $q$ unknowns, $b_1,\ldots,b_q$, in the
+denominator, giving a total of $n = p+q+1$ unknowns.
+
+One way to define $g(x)$ is to make sure that $g(x_i)=f(x_i)$ for each $x_i$ in
+a set of $n$ nodes, $x_1,\ldots,x_n$, where
+%
+\begin{gather}
+%  x_{\min} < x_1 < x_2 < \cdots < x_{n-1} < x_n < x_{\max}
+  x_{\min} < x_1 < \cdots < x_n < x_{\max}.
+\end{gather}
+%
+That is, for $k = 1,\ldots,n$, we want to have
+%
+\begin{gather}
+  \begin{split}
+    f(x_k)
+    = g(x_k)
+    = \frac{P(x_k)}{Q(x_k)}
+    = \frac{a_px_k^p + a_{p-1}x_k^{p-1} + \cdots + a_2x_k^2 + a_1x_k + a_0}
+    {b_qx_k^q + b_{q-1}x_k^{q-1} + \cdots + b_2x_k^2 + b_1x_k + 1}
+ \end{split}
+\end{gather}
+%
+Multiplying both sides by the denominator $Q(x_k)$, gives
+%
+\begin{gather}
+  \begin{split}
+  & a_px_k^p + a_{p-1}x_k^{p-1} + \cdots + a_2x_k^2 + a_1x_k + a_0 \\
+  & \quad = f(x_k)b_qx_k^q + f(x_k)b_{q-1}x_k^{q-1} + \cdots + f(x_k)b_2x_k^2 + f(x_k)b_1x_k + f(x_k)
+  \end{split}
+\end{gather}
+%
+Reordering so all the unknown parameters are on the left side of the equation,
+gives
+%
+\begin{gather}
+  \begin{split}
+  & a_px_k^p + a_{p-1}x_k^{p-1} + \cdots + a_2x_k^2 + a_1x_k + a_0 \\
+   &\quad - f(x_k)b_qx_k^q - f(x_k)b_{q-1}x_k^{q-1} - \cdots - f(x_k)b_2x_k^2 - f(x_k)b_1x_k = f(x_k)
+  \end{split}
+\end{gather}
+%
+Now we have a set of $n$ linear equations that can be written using matrix
+notation as
+%
+\begin{gather}
+    \begin{bmatrix}
+      x_1^p  & x_1^{p-1} & \cdots & x_1    & 1      & -f(x_1)x_1^q & -f(x_1)x_1^{q-1} & \cdots & -f(x_1)x_1 \\
+      x_2^p  & x_2^{p-1} & \cdots & x_2    & 1      & -f(x_2)x_2^q & -f(x_2)x_2^{q-1} & \cdots & -f(x_2)x_2 \\
+      \vdots & \vdots   & \ddots & \vdots & \vdots & \vdots      & \vdots          & \cdots & \vdots \\
+      x_n^p  & x_n^{p-1} & \cdots & x_n    & 1      & -f(x_n)x_n^q & -f(x_n)x_n^{q-1} & \cdots & -f(x_n)x_n \\
+    \end{bmatrix}
+    \begin{bmatrix}
+      a_p \\ a_{p-1} \\ \vdots \\ a_1 \\ a_0 \\ b_q \\ b_{q-1} \\ \vdots \\ b_1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+      f(x_1) \\ f(x_2) \\ \vdots \\ f(x_n)
+    \end{bmatrix}
+    \label{eq:matrix}
+\end{gather}
+%
+There are $n$ equations and $n$ unknown parameters, so given the function
+$f(x)$, the degrees $p$ and $q$, and the nodes $x_1,x_2,\ldots,x_n$, the
+parameters $a_p,a_{p-1},\ldots,a_0$ and $b_q,b_{q-1},\ldots,b_1$ can be
+obtained by solving the set of linear equations~\eqref{eq:matrix}.
+
+\subsection{The local extrema}
+
+The next step is to find the $n+1$ local extrema of the error in the
+approximation, $(x_{\text{e},k}, y_{\text{e},k})$ for $k=1,\ldots,n+1$.
+Typically, the error is either the absolute error $g(x)-f(x)$ or the relative
+error $(g(x)-f(x))/f(x)$.
+
+The first and last extrema, $(x_{\text{e},1}, y_{\text{e},1})$ and
+$(x_{\text{e},n+1}, y_{\text{e},n+1})$, are easy to find, since they are
+located at $x_{\min}$ and $x_{\max}$, respectively.
+
+The remaining extrema $(x_{\text{e},k}, y_{\text{e},k})$ for $k=2,\ldots,n$ can
+be found by using a search algorithm for numerical optimisation. Note that each
+of these extrema are located strictly between two nodes, $x_{k-1} <
+x_{\text{e},k} < x_k$, so we have a lower and upper bound for the $x$-value of
+each extremum.
+
+\subsection{The next set of nodes}
+
+The next step is to try to find a better set of nodes, one that hopefully gives
+a rational approximation with smaller maximum errors.
+
+The new set of nodes is created by iterating over each node $x_k$,
+$k=1,\ldots,n$, and compute a new node based on the current node $x_k$ and the
+nearest extremum on each side of $x_k$, which are $(x_{\text{e},k},
+y_{\text{e},k})$ and $(x_{\text{e},k+1}, y_{\text{e},k+1})$. The essence is to
+move the current $x_k$ in the direction of the extremum with the largest
+absolute value. If we use $x_{k,\text{next}}$ to denote the next iteration of
+$x_k$, then $x_{k,\text{next}}$ can be found by first computing
+%
+\begin{gather}
+  c_1 = \frac{x_k - x_{\text{e},k}}{|y_{\text{e},k}|} \qquad\text{and}\qquad
+  c_2 = \frac{x_{\text{e},k+1} - x_k}{|y_{\text{e},k+1}|}
+  \label{eq:nodes_next_1}
+\end{gather}
+and then
+\begin{gather}
+  x_{k,\text{next}} = x_{\text{e},k} + c_1 \cdot \frac{x_{\text{e},k+1} - x_{\text{e},k}}{c_1 + c_2}
+  \label{eq:nodes_next_2a}
+\end{gather}
+or, equivalently,
+\begin{gather}
+  x_{k,\text{next}} = x_{\text{e},k+1} - c_2 \cdot \frac{x_{\text{e},k+1} - x_{\text{e},k}}{c_1 + c_2}
+  \label{eq:nodes_next_2b}
+\end{gather}
+%
+The formula above ensures that the node is moved in the direction of the
+extremum with the largest absolute value. It also ensures that the new node is
+on the between the two extremas, i.e., $x_{\text{e},k} < x_{k,\text{next}} <
+x_{\text{e},k+1}$.
+
+\subsection{Stopping rules}
+
+Once a new iteration of the set of nodes has been computed, the next step is to
+go back and compute the next iteration of the rational function, then compute
+the errors, and so on.
+
+There are several criteria that can be used for stopping the algorithm. My
+preferred criterion is the following: When the local extrema of the error have
+been computed, compare the smallest and largest absolute values and see if they
+are sufficiently close. That is, see if
+%
+\begin{gather}
+  \max_{1\le k\le n+1}|y_{\text{e},k}| - \min_{1\le k\le n+1}|y_{\text{e},k}|
+  \label{eq:maxmin}
+\end{gather}
+%
+is smaller than some tolerance. An even better alternative is to compute the
+difference in \eqref{eq:maxmin} at each iteration, and stop when the
+difference does not get any smaller.
+
+Following are some examples of the algorithm in action. Attempts at recreating
+the results might not give the exact same values, but the values should not be
+far off. The exact numerical values depend on which algorithm is used for
+solving the set of linear equations, which algorithm is used for finding the
+local extrema, which tolerances are used etc.
+
+\section{Example~1: $\exp(x)$}
+
+Let's create a rational approximation of the exponential function $\exp(x)$
+over the interval $[-1,2]$ using double precision arithmetic. We use $p=q=2$,
+which gives $n=5$. The approximating rational function is then
+%
+\begin{gather}
+  g(x) = \frac{a_2 p^2 + a_1 p + a_0}{b_2 x^2 + b_1 x + 1}
+\end{gather}
+
+\subsection{The initial set of nodes}
+
+We use equations~\eqref{eq:nodes_cheb} and~\eqref{eq:nodes_transf} to obtain
+the vector with the Chebyshev nodes $x_1,\ldots,x_5$ on the interval $[-1,2]$,
+%
+\begin{gather}
+\left[ \begin{array}{c}
+  -0.92658477444273 \\
+  -0.38167787843871 \\
+  0.5 \\
+  1.38167787843871 \\
+  1.92658477444273
+  \end{array} \right]
+\label{eq:exp_nodes_iter0}
+\end{gather}
+
+\subsection{From nodes to coefficients}
+
+Computing the numerical values for equation~\eqref{eq:matrix}, and rounding the
+values to 6 decimal digits for display purposes, we get
+%
+\begin{gather}
+\left[ \begin{array}{ccccc}
+  1.008559 & -0.926585 & 1 & -0.339907 & 0.366838 \\
+  0.145678 & -0.381678 & 1 & -0.0994565 & 0.260577 \\
+  0.25 & 0.5 & 1 & -0.41218 & -0.824361 \\
+  1.90903 & 1.38168 & 1 & -7.60096 & -5.50126 \\
+  3.71173 & 1.92658 & 1 & -25.4848 & -13.228
+\end{array} \right]
+  \left[ \begin{array}{c}
+      a_2 \\
+      a_1 \\
+      a_0 \\
+      b_2 \\
+      b_1
+    \end{array} \right]
+  =
+\left[ \begin{array}{c}
+  0.395904 \\
+  0.682715 \\
+  1.64872 \\
+  3.98158 \\
+  6.86602
+  \end{array} \right]
+\label{eq:exp_linsys_iter0}
+\end{gather}
+%
+Solving the system of equations using full double precision (not the rounded
+values in equation~\eqref{eq:exp_linsys_iter0}) gives
+%
+\begin{gather}
+  \left[ \begin{array}{c}
+      a_2 \\
+      a_1 \\
+      a_0 \\
+      b_2 \\
+      b_1
+    \end{array} \right]
+  =
+  \left[ \begin{array}{c}
+      0.103211096465573 \\
+      0.544889277568218 \\
+      1.00062089666634 \\
+      0.062600694428927 \\
+      -0.455693441851644
+    \end{array} \right]
+\end{gather}
+%
+and hence the first approximating rational function is
+%
+\begin{gather}
+  g(x) = \frac{0.103211096465573 x^2 + 0.544889277568218 x + 1.00062089666634}
+              {0.062600694428927 x^2 - 0.455693441851644 x + 1}
+\end{gather}
+%
+Figure~\ref{fig:approx} shows the function $f(x)$ together with the rational
+approximation $g(x)$. The rational approximation is so good that it is
+visually indistinguishable from $f(x)$. Figure~\ref{fig:abs_err} shows the
+absolute error $g(x)-f(x)$. We can see that the absolute value of the absolute
+error, $|g(x)-f(x)|$, is less than $6\times 10^{-3}$ on the whole interval.
+%
+\begin{figure}[htb]
+  \centering
+  %\begin{center}
+    \includegraphics[width=0.95\textwidth]{ratapprox_exp_iter00_approx.eps}
+    \caption{The function $f(x)=\exp(x)$ and the rational approximation
+      $g(x)$. The approximation $g(x)$ is already so good that it is visually
+      indistinguishable from $f(x)$. The black circles are the nodes, where
+      $g(x_k) = \exp(x_k)$.}
+    \label{fig:approx}
+  %\end{center}
+\end{figure}
+%
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.95\textwidth]{ratapprox_exp_iter00_abs_err_with_extrema.eps}
+  \caption{The absolute error $g(x) - f(x)$ with the initial set of nodes. The
+    black circles are the nodes, where $f(x_k) = g(x_k)$. The red circles are
+    the local extrema of the absolute error. Maximum absolute error is $\approx
+    5.20\times 10^{-3}$}
+  \label{fig:abs_err}
+\end{figure}
+
+\subsection{The local extrema}
+
+Now we need to locate the $n+1$ local extrema $(x_{\text{e},k},
+y_{\text{e},k})$ for $k=1,\ldots,n+1$ of the error $g(x)-f(x)$, i.e., the
+location of the red dots in figure~\ref{fig:abs_err})
+
+The local extrema for $k=1$ and $k=n+1$ are the end points $x_{\min}$ and
+$x_{\max}$, respectively. The remaining extrema for $k=2,\ldots,n$ were found
+by using a simple search algorithm. We end up with the following 6 local
+extrema $(x_{\text{e},n+1}, y_{\text{e},n+1})$
+%
+\begin{equation}
+  \begin{array}{rrr}
+    k & x_{\text{e},k} & y_{\text{e},k} \\
+    \hline
+    1 & -1.00000000000000 &  0.00025918375466083 \\
+    2 & -0.68523475856822 & -0.00033400953063745 \\
+    3 &  0.11388755308646 &  0.00067206029324729 \\
+    4 &  1.04546806176605 & -0.00171054224601663 \\
+    5 &  1.74595798292675 &  0.00381266068685626 \\
+    6 &  2.00000000000000 & -0.00520217975906512
+  \end{array}
+  \label{eq:exp_extrema_iter0}
+\end{equation}
+
+\subsection{The next set of nodes}
+
+Using the nodes in equation~\eqref{eq:exp_nodes_iter0} and the local extrema in
+table~\eqref{eq:exp_extrema_iter0}, and the formula in
+equations~\eqref{eq:nodes_next_1} and \eqref{eq:nodes_next_2a}, we get the next
+set of nodes
+%
+\begin{gather}
+  \left[ \begin{array}{r}
+      -0.911358653379716 \\
+      -0.244061276086604 \\
+      0.712956492669578 \\
+      1.516827482948273 \\
+      1.941693558329264
+    \end{array} \right]
+\end{gather}
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.95\textwidth]{ratapprox_exp_iter01_abs_err_with_extrema.eps}
+  \caption{The absolute error $g(x) - \exp(x)$ after one iteration, i.e., the
+    second set of nodes. The black circles are the nodes, where $\exp(x_k) =
+    g(x_k)$. The red circles are the local extrema of the absolute error.
+    Maximum absolute error is $\approx 2.55\times 10^{-3}$, about the half of
+    the initial maximum absolute error of $\approx 5.20\times 10^{-3}$.}
+  \label{fig:abs_err_iter2}
+\end{figure}
+
+\subsection{The final approximation}
+
+After about 40 iterations, I ended up with the following set of nodes
+%
+\begin{gather}
+  \left[ \begin{array}{c}
+  -0.866604114461043 \\
+  -0.0346435734341968 \\
+  0.925101390052664 \\
+  1.61421889227264 \\
+  1.95737952380446
+    \end{array} \right]
+\end{gather}
+%
+and the following rational approximation
+%
+\begin{gather}
+  g(x) = \frac{0.11693919078398367 x^2 + 0.56561592262102534 x + 1.0001180241137353}
+              {0.056811738202527724 x^2 - 0.43772204843642648 x + 1}
+\end{gather}
+%
+The result is shown in figure~\ref{fig:abs_err_final}. Note that while
+$\exp(0)=1$, we have that $g(0)\ne 1$, because $a_0=1.0001180241137353$ rather
+than $a_0=1$. If we insisted that $g(0)=0$, we could have placed one node at
+$x=0$ and not allowed the algorithm to move it.
+%
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.95\textwidth]{ratapprox_exp_iter43_abs_err_with_extrema.eps}
+  \caption{The absolute error $g(x) - \exp(x)$ when the algorithm has halted.
+    The black circles are the nodes, where $\exp(x_k) = g(x_k)$. The red
+    circles are the local extrema of the absolute error. The maximum errors are
+    all $\approx 1.092674\times 10^{-3}$, which is about $1/5$ of the maximum
+    error using the initial nodes.}
+  \label{fig:abs_err_final}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.95\textwidth]{ratapprox_exp_min_max_abs_err.eps}
+  \caption{At each iteration, one of the local extrema will have the largest
+    absolute value and another will have the smallest absolute value. Ideally,
+    these two values should be identical. This figure shows the largest (in
+    blue) and smallest (in red) of these values the first iterations. The
+    algorithm halted after around 40 iterations. At that point, the maximum and
+    minimum value were $1.09267388313805\times 10^{-3}$ and
+    $1.09267388312984\times 10^{-3}$, respectively. The difference between them
+    was $8.21\times10^{-15}$, which is a relative differenct of $7.51\times
+    10^{-12}$, which is pretty much as good as it gets with double precision
+    arithmetic.}
+  \label{fig:abs_err_extrema}
+\end{figure}
+
+%%\section{Example~2: $\log(x+1)$}
+%%
+%%Now let's create a rational approximation of the function $\log(x+1)$, altså
+%%called $\text{log1p}(x)$, over the interval $[-0.5,0.5]$ using double precision
+%%arithmetic. Again, we use $p=q=2$, which gives $n=5$. The approximating rational
+%%function is then
+%%
+%%\begin{gather}
+%%  g(x) = \frac{a_2 p^2 + a_1 p + a_0}{b_2 x^2 + b_1 x + 1}
+%%\end{gather}
+
+\section{Example~2: $\Phi^{-1}(x)$}
+
+Not written yet.
+
+\end{document}
+
+\section{Notes/comments}
+
+\subsection{Selecting degrees of the polynomials}
+
+When selecting the degrees $p$ and $q$ of the polynomials $P(x)$ and $Q(x)$, I
+usually start with $p$ identical to or close to $q$ and from there see if I can
+get a better approximation and by increasing $p$ and decreasing $q$ and vice
+versa.
+
+\subsection{Increasing stability}
+
+In some cases, the algorithm diverges. In other cases, the algorithm is
+unstable so that the nodes jump back and forth and the difference between the
+largest and smallest extremum of the error (see equation \eqref{eq:maxmin})
+does not gradually decrease, but jumps up and down. In such cases, I have found
+it useful to scale down the amount by which each node is moved. For example, if
+$x_{k,\text{next}}$ is the next iteration of node $x_k$, then re-compute
+$x_{k,\text{next}}$ with
+%
+\begin{align}
+  x_{k,\text{next}} \leftarrow x_k + c(x_{k,\text{next}} - x_k)
+\end{align}
+%
+where $c$ is some factor smaller than~1.
+
+%%\subsection{Ensuring that $g(0)=0$}
+%%
+%%If the function to approximate satisfies $f(0)=0$, and you want to ensure that
+%%also the approximation $g(0)=0$, explicitly set $a_0=0$.
+
+\subsection{Approximating an odd function}
+
+If the function to approximate is odd, only the odd coefficients in the
+numerator will be non-zero, and only the even coefficients in the denominator
+will be non-zero.
+
+\subsection{Approximating an even function}
+
+If the function to approximate is odd, only the odd coefficients in the
+numerator will be non-zero, and only the even coefficients in the denominator
+will be non-zero.
+
+\end{document}
