@@ -1,0 +1,12 @@
+# ignore LaTeX auxiliary files and transcript files
+
+*.aux
+*.log
+
+# ignore generated files
+
+*.dvi
+*.pdf
+*.ps
+*.eps
+*.png
